@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>JavaScript Bar Chart</title>
+    <meta charset="utf-8"/>
+    <script src="https://cdn.anychart.com/releases/8.0.0/js/anychart-base.min.js" type="text/javascript"></script>
+</head>
+<body>
+<div>
+<textarea id="code" rows="21" cols="120">
+categoryNames = ["instant loose", "win possible"]
+
+result = function () {
+    const result = []
+    for (let i = 0; i < 6; i++) result.push(Math.floor(Math.random() * 6) + 1);
+    return result;
+}
+
+categorize = function (result) {
+    const counts = count(result);
+    const countsOfCounts = count(counts);
+    const instantLoose = counts[1] === 0 && counts[5] === 0 && countsOfCounts[3] === 0 && countsOfCounts[2] < 3;
+    return instantLoose ? 0 : 1;
+}
+
+function count(array) {
+    const result = [0, 0, 0, 0, 0, 0];
+    for (const element of array) result[element] = result[element] ? result[element] + 1 : 1;
+    return result;
+}
+</textarea>
+<br />
+<button onclick="resetWithCode(document.getElementById('code').value)">Ok</button>
+</div>
+<div>
+<div id="chart" style="width: 500px; height: 400px"></div>
+<button onclick="oneIteration();">Roll single!</button>
+<button onclick="clearInterval(intervalHandle); intervalHandle = setInterval(oneIteration, document.getElementById('speed').value);">Roll many!</button>
+<button onclick="clearInterval(intervalHandle);">Stop roll many!</button>
+<label>Milliseconds per roll: <input type="number" id="speed" value="100"/></label>
+<div id="results"></div>
+</div>
+<script>
+    let intervalHandle = undefined;
+    let oneIteration = function() { document.getElementById("results").innerText = "click 'Ok'"}
+
+    function resetWithCode(code) {
+        anychart.onDocumentReady(function () {
+            // clear previous
+            clearInterval(intervalHandle);
+            const resultsDiv = document.getElementById("results");
+            resultsDiv.innerHTML = "";
+
+            // initial setup
+            let categoryNames = ["no categories"];
+            let categorize = function() { return 0; }
+            let result = function() { return undefined; }
+            eval(code);
+
+            const counts = [];
+            for (let i = 0; i < categoryNames.length; i++) counts.push(0);
+            let total = 0;
+
+            // prepare chart
+            const chart = anychart.column();
+            chart.title("empirical results");
+            const dataArray = []
+            for (const index in categoryNames) dataArray.push({x: categoryNames[index], value: counts[index]});
+            const data = anychart.data.set(dataArray);
+            const view = data.mapAs();
+            const series = chart.column(data);
+            series.name("Count");
+            series.tooltip().format(function () {
+                const percentage = (this.value) / total;
+                return "Count: " + this.value + " of " + total + "\nPercentage: " + percentage * 100 + "%"
+            });
+            chart.container("chart").draw();
+
+            oneIteration = function () {
+                let oneResult = result();
+                let category = categorize(oneResult);
+
+                total++;
+                counts[category]++;
+
+                view.set(category, "value", counts[category]);
+                resultsDiv.innerHTML = oneResult + " -> " + category + "<br />" + resultsDiv.innerHTML;
+                resultsDiv.innerHTML = resultsDiv.innerHTML.substring(0, 1000);
+            }
+        });
+    }
+</script>
+</body>
+</html>
